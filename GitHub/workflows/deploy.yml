@@ -1,0 +1,53 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # (Optional but helpful) Make sure Pages is configured
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Use npm install instead of npm ci to avoid lockfile mismatch issues
+      - run: npm install --no-audit --no-fund
+
+      # Quick debug info (helps us read logs when it fails)
+      - run: node -v && npm -v && npx vite -v || true
+      - run: echo "package.json:" && cat package.json
+
+      - name: Build
+        run: npm run build
+
+      # Show what's inside dist if build succeeds (or why it's empty if it doesn't)
+      - run: echo "DIST TREE:" && (ls -la dist || true)
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
